@@ -1,0 +1,22 @@
+name: nais-immich-ml
+
+services:
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:v3.4.1-cuda
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3003:3003'
+    environment:
+      MACHINE_LEARNING_MODEL_REVISION: v2
+    volumes:
+      - model-cache:/cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  model-cache:
