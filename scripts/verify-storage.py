@@ -1,3 +1,4 @@
+import argparse
 import hashlib
 import json
 import os
@@ -5,7 +6,14 @@ from pathlib import Path
 import tempfile
 import time
 
-fd, name = tempfile.mkstemp(prefix='nais-storage-check-', dir='/var/tmp')
+parser = argparse.ArgumentParser(description='Verify a 256 MiB write and read on a Linux filesystem.')
+parser.add_argument('--directory', type=Path, default=Path('/var/tmp'),
+                    help='Existing writable directory on the filesystem to test (default: /var/tmp)')
+directory = parser.parse_args().directory.resolve()
+try:
+    fd, name = tempfile.mkstemp(prefix='nais-storage-check-', dir=directory)
+except OSError as error:
+    parser.exit(1, f'Cannot create the storage test file in {directory}: {error}\n')
 path = Path(name)
 try:
     expected = hashlib.sha256()
@@ -25,6 +33,6 @@ try:
         read_seconds = time.monotonic() - started
     if actual != expected.hexdigest():
         raise RuntimeError('SSD test read-back checksum mismatch')
-    print(json.dumps({'verified': True, 'bytes': 256*1024*1024, 'write_and_fsync_seconds': round(write_seconds, 2), 'read_and_hash_seconds': round(read_seconds, 2), 'sha256': actual}))
+    print(json.dumps({'verified': True, 'directory': str(directory), 'bytes': 256*1024*1024, 'write_and_fsync_seconds': round(write_seconds, 2), 'read_and_hash_seconds': round(read_seconds, 2), 'sha256': actual}))
 finally:
     path.unlink(missing_ok=True)
